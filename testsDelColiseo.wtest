@@ -1,0 +1,149 @@
+import armasYArmaduras.*
+import gladiadoresYGrupos.*
+import coliseo.*
+
+describe "Tests de armasYArmaduras" {
+    
+    test "Arma de filo calcula su poder como filo por longitud" {
+        const espada = new ArmaFilo(filo = 0.8, longitud = 50)
+        assert.equals(40, espada.poderAtaque())
+    }
+    
+    test "Arma contundente tiene como poder su peso" {
+        const maza = new ArmaContundente(peso = 35)
+        assert.equals(35, maza.poderAtaque())
+    }
+    
+    test "Casco siempre otorga 10 puntos de armadura" {
+        const casco = new Casco()
+        const gladiadorCualquiera = object {
+            method destreza() = 20
+        }
+        assert.equals(10, casco.puntosArmadura(gladiadorCualquiera))
+    }
+    
+    test "Escudo otorga 5 más el 10% de la destreza del gladiador" {
+        const escudo = new Escudo()
+        const gladiadorCualquiera = object {
+            method destreza() = 30
+        }
+        // 5 + (30 * 0.1) = 5 + 3 = 8
+        assert.equals(8, escudo.puntosArmadura(gladiadorCualquiera))
+    }
+}
+
+describe "Tests de gladiadoresYGrupos" {
+    
+    const espada = new ArmaFilo(filo = 0.8, longitud = 50)
+    const casco = new Casco()
+    
+    test "Mirmillon calcula poder de ataque como arma más fuerza" {
+        const mirmillon = new Mirmillon(fuerza = 25, arma = espada, armadura = casco)
+        // arma: 40, fuerza: 25 → total: 65
+        assert.equals(65, mirmillon.poderAtaque())
+    }
+    
+    test "Mirmillon calcula defensa como armadura más destreza" {
+        const mirmillon = new Mirmillon(fuerza = 25, arma = espada, armadura = casco)
+        // casco: 10, destreza: 15 → total: 25
+        assert.equals(25, mirmillon.defensa())
+    }
+    
+    test "Dimachaerus calcula poder como fuerza más suma de todas sus armas" {
+        const daga = new ArmaFilo(filo = 0.5, longitud = 20)
+        const dimachaerus = new Dimachaerus(destreza = 20, armas = [espada, daga])
+        // fuerza: 10, espada: 40, daga: 10 → total: 60
+        assert.equals(60, dimachaerus.poderAtaque())
+    }
+    
+    test "Dimachaerus aumenta su destreza en 1 cada vez que ataca" {
+        const dimachaerus = new Dimachaerus(destreza = 20, armas = [espada])
+        const mirmillon = new Mirmillon(fuerza = 30, arma = espada, armadura = casco)
+        
+        dimachaerus.atacar(mirmillon)
+        assert.equals(21, dimachaerus.destreza())
+        
+        dimachaerus.atacar(mirmillon)
+        assert.equals(22, dimachaerus.destreza())
+    }
+    
+    test "Al pelear ambos gladiadores se atacan mutuamente si ambos sobreviven" {
+        const glad1 = new Mirmillon(fuerza = 25, arma = espada, armadura = casco)
+        const glad2 = new Mirmillon(fuerza = 20, arma = espada, armadura = casco)
+        
+        glad1.pelearCon(glad2)
+        
+        assert.that(glad1.vida() < 100)
+        assert.that(glad2.vida() < 100)
+    }
+    
+    test "Grupo elige como campeón al gladiador con mayor poder de ataque que puede combatir" {
+        const fuerte = new Mirmillon(fuerza = 35, arma = espada, armadura = casco)
+        const debil = new Mirmillon(fuerza = 20, arma = espada, armadura = casco)
+        const grupo = new Grupo(nombre = "Equipo", gladiadores = [debil, fuerte])
+        
+        assert.equals(fuerte, grupo.campeon())
+        
+        fuerte.recibirDaño(100)
+        assert.equals(debil, grupo.campeon())
+    }
+}
+describe "Tests de coliseo" {
+    
+    const espada = new ArmaFilo(filo = 0.8, longitud = 50)
+    const casco = new Casco()
+    
+    test "Coliseo organiza combate entre dos grupos" {
+        const grupo1 = new Grupo(
+            nombre = "Equipo A",
+            gladiadores = [new Mirmillon(fuerza = 30, arma = espada, armadura = casco)]
+        )
+        const grupo2 = new Grupo(
+            nombre = "Equipo B",
+            gladiadores = [new Mirmillon(fuerza = 28, arma = espada, armadura = casco)]
+        )
+        
+        coliseo.organizarCombate(grupo1, grupo2)
+        
+        assert.equals(1, grupo1.peleasParticipadas())
+        assert.equals(1, grupo2.peleasParticipadas())
+    }
+    
+    test "Coliseo organiza combate entre grupo y gladiador individual" {
+        const grupo = new Grupo(
+            nombre = "Equipo",
+            gladiadores = [new Mirmillon(fuerza = 30, arma = espada, armadura = casco)]
+        )
+        const gladiadorSolo = new Dimachaerus(destreza = 25, armas = [espada])
+        
+        coliseo.organizarCombate(grupo, gladiadorSolo)
+        
+        assert.that(gladiadorSolo.vida() < 100)
+        assert.equals(1, grupo.peleasParticipadas())
+    }
+    
+    test "Coliseo cura a un gladiador individual restaurando su vida a 100" {
+        const gladiador = new Mirmillon(fuerza = 30, arma = espada, armadura = casco)
+        gladiador.recibirDaño(60)
+        
+        assert.equals(40, gladiador.vida())
+        
+        coliseo.curar(gladiador)
+        
+        assert.equals(100, gladiador.vida())
+    }
+    
+    test "Coliseo cura a todos los gladiadores de un grupo" {
+        const glad1 = new Mirmillon(fuerza = 30, arma = espada, armadura = casco)
+        const glad2 = new Dimachaerus(destreza = 20, armas = [espada])
+        const grupo = new Grupo(nombre = "Equipo", gladiadores = [glad1, glad2])
+        
+        glad1.recibirDaño(50)
+        glad2.recibirDaño(70)
+        
+        coliseo.curarGrupo(grupo)
+        
+        assert.equals(100, glad1.vida())
+        assert.equals(100, glad2.vida())
+    }
+}

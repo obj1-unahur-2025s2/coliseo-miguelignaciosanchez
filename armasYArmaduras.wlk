@@ -1,17 +1,17 @@
-// ARMAS
+// Armas 
 class ArmaFilo {
-    const property filo // número entre 0 y 1
-    const property longitud // en centímetros
-    method poder() = filo * longitud
+    const property filo // entre 0 y 1
+    const property longitud // en cm   
+    method poderAtaque() = filo * longitud
 }
 class ArmaContundente {
     const property peso
-    method poder() = peso
+    method poderAtaque() = peso
 }
-// ARMADURAS
+// Armaduras 
 class Casco {
-    method puntos(gladiador) = 10
+    method puntosArmadura(gladiador) = 10
 }
 class Escudo {
-    method puntos(gladiador) = 5 + (gladiador.destreza() * 0.1)
+    method puntosArmadura(gladiador) = 5 + gladiador.destreza() * 0.1
 }
